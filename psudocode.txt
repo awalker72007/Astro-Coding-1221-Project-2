@@ -1,1 +1,21 @@
-#psudocode
+get data from skyfield(location colombus) check time
+chech ra/dec, 
+see if they are in viewable range and find coordiates/position, if they are, 
+compare them together to see if they are in conjunction, 
+find Elongation, Retrograde motion, Opposition
+Use Skyfield to calculate planet positions for each day 
+store in a multi-index DataFrame (date, object)
+compute rise/set times and culmination with Astropy
+determine best viewing times (highest altitude)
+Create visualizations showing planet tracks across the sky
+upcoming conjunction dates (2+)
+make a page in streamlit to show the data in tables
+
+advanced stuff:
+calculate planet brightness and apparent size
+identify greatest elongations for Mercury/Venus, 
+predict occultations
+create animated sky movies showing planet motion
+compute retrograde periods, track opposition dates for outer planets
+or build a "planet observing challenge" system.
+
