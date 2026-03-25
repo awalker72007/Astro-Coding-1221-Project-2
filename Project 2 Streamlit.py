@@ -14,6 +14,7 @@ from astroquery.simbad import Simbad
 from astroplan import Observer, FixedTarget
 from astropy.visualization import astropy_mpl_style, quantity_support
 import streamlit as st
+import os
 
 eph = load('de440s.bsp')
 ephemeris = eph 
@@ -37,10 +38,11 @@ earth = eph['earth']
 ts = load.timescale()
 #Skyfield's time system
 days = np.arange(0, 90)
+global t_variable
 t_variable = ts.utc(2026, 3, 1 + days)
 t_start = ts.utc(2026, 3, 1)
 t_end = ts.utc(2026, 3, 1 + 90)
-global t_variable
+
 
 now = Time.now()
 days =np.linspace(0, 90, 24*91)
@@ -130,8 +132,9 @@ for planet_name, body in bodies.items():
     print(df)
 
 #Singular day calculations
-single_day = Time.now()
 global single_day
+single_day = Time.now()
+
 
 def is_night():
     night_check = almanac.dark_twilight_day(eph, columbus_topos)
@@ -153,6 +156,7 @@ cmap = plt.get_cmap(planet_cmaps.get(planet_name, "viridis"))
 
 # Daily polar sky paths — run after the setup cell (needs `columbus`, `bodies`, `ts`).
 N_SAMPLES_PER_DAY = 96  # samples from 0–24h UTC
+global DAYS_UTC
 def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     hours = np.linspace(0, 24, n_samples, endpoint=False)
     t_day = ts.utc(year, month, day, hours, 0)
@@ -222,12 +226,14 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     ax.set_title(f'All bodies sky paths — {year}-{month:02d}-{day:02d} UTC', pad=12)
     plt.tight_layout()
     plt.show()
+    plt.savefig('Image')
     return pd.concat(dfs, ignore_index=True)
+    
 # Add every UTC day you want; each gets one figure and one entry in the dict.
 DAYS_UTC = [
     (2026, 3, 1),
 ]
-global DAYS_UTC
+
 sky_path_df_by_day = {}
 for y, m, d in DAYS_UTC:
     day_key = f"{y}-{m:02d}-{d:02d}"
@@ -239,9 +245,9 @@ for day_key, df_day in sky_path_df_by_day.items():
 st.title("Solar System Dashboard")
 st.write("This Solar System Dashboard will track and display the positions of the planets (and the moon) in the sky in relation to Columbus, Ohio")
 st.write("Select a date to see the positions of the planets in the sky")
-DAYS_UTC = st.date_input("Select a date", datetime.now())
+DAYS_UTC = st.date_input("Select a date", )
 if st.button("Plot Planets"):
     with st.spinner("Plotting planets..."):
         plot_all_planets_sky_path(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day)
         st.success("Planets plotted successfully!")
-    st.pyplot(fig)
+    st.image("Image.png")
