@@ -132,8 +132,9 @@ for planet_name, body in bodies.items():
     print(df)
 
 #Singular day calculations
-single_day = Time.now()
 global single_day
+single_day = Time.now()
+
 
 def is_night():
     night_check = almanac.dark_twilight_day(eph, columbus_topos)
@@ -159,7 +160,7 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     hours = np.linspace(0, 24, n_samples, endpoint=False)
     t_day = ts.utc(year, month, day, hours, 0)
     fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(122, projection='polar')
+    ax = fig.add_subplot(111, projection='polar')
     ax.set_theta_zero_location('N')
     ax.set_theta_direction(-1)
     ax.set_rlim(0, 90)
@@ -225,6 +226,7 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     ax.set_title(f'All bodies sky paths — {year}-{month:02d}-{day:02d} UTC', pad=12)
     plt.tight_layout()
     plt.show()
+    plt.savefig("skypath.png")
     return pd.concat(dfs, ignore_index=True)
     
     # Add every UTC day you want; each gets one figure and one entry in the dict.
@@ -247,7 +249,9 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
     t_day = ts.utc(year, month, day, hours, 0)
     # t0 = ts.utc(year, month, day, 0, 0, 0)
     # t_day = t0 + hours * 3600
-    fig, ax = plt.subplots()
+    
+    fig = plt.figure(figsize=(10,10))
+    ax = fig.add_subplot()
     tab = plt.cm.tab10(np.linspace(0, 1, max(10, len(bodies))))
     dfs = []
     for idx, (planet_name, body) in enumerate(bodies.items()):
@@ -281,9 +285,11 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
     ax.set_xticklabels([0, 6, 12, 18, 24])
     ax.set_yticks(range(-180, 181, 90))
     ax.set_yticklabels([-180, -90, '0 (Horizon)', 90, 180])
-    
+   
+
     plt.tight_layout()
     plt.show()
+    plt.savefig("altvstime.png")
     return pd.concat(dfs, ignore_index=True)
 DAYS_UTC = [
     (2026, 3, 1),
@@ -306,5 +312,6 @@ if st.button("Plot Planets"):
         plot_all_planets_sky_path(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day)
         plot_all_planets_altitude_vs_time(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day)
         st.success("Planets plotted successfully!")
-    st.image("image.png")
-    st.image("image2.png")
+    col1, col2 = st.columns(2)
+    col1.image("skypath.png")
+    col2.image("altvstime.png")
