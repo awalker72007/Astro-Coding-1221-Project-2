@@ -16,6 +16,10 @@ from astropy.visualization import astropy_mpl_style, quantity_support
 import streamlit as st
 import os
 
+plt.rcParams['figure.facecolor'] = '#0e1117'
+plt.rcParams['text.color'] = 'white'
+plt.rcParams['figure.']
+
 eph = load('de440s.bsp')
 ephemeris = eph 
 #Using the de440s emphemeris file for the locations
@@ -158,7 +162,7 @@ cmap = plt.get_cmap(planet_cmaps.get(planet_name, "viridis"))
 N_SAMPLES_PER_DAY = 96  # samples from 0–24h UTC
 def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     hours = np.linspace(0, 24, n_samples, endpoint=False)
-    t_day = ts.utc(year, month, day, hours, 0)
+    t_day = ts.utc(year, month, day, hours + 7, 0)
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='polar')
     ax.set_theta_zero_location('N')
@@ -246,7 +250,7 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
     hours = np.linspace(0, 24, n_samples, endpoint=False)
     # Skyfield time array for each UTC hour
     # If this ever complains about float hours, use the t0 + seconds approach below instead.
-    t_day = ts.utc(year, month, day, hours, 0)
+    t_day = ts.utc(year, month, day, hours + 12, 0)
     # t0 = ts.utc(year, month, day, 0, 0, 0)
     # t_day = t0 + hours * 3600
     
