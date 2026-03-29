@@ -132,9 +132,8 @@ for planet_name, body in bodies.items():
     print(df)
 
 #Singular day calculations
-global single_day
 single_day = Time.now()
-
+global single_day
 
 def is_night():
     night_check = almanac.dark_twilight_day(eph, columbus_topos)
@@ -156,17 +155,17 @@ cmap = plt.get_cmap(planet_cmaps.get(planet_name, "viridis"))
 
 # Daily polar sky paths — run after the setup cell (needs `columbus`, `bodies`, `ts`).
 N_SAMPLES_PER_DAY = 96  # samples from 0–24h UTC
-global DAYS_UTC
 def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     hours = np.linspace(0, 24, n_samples, endpoint=False)
     t_day = ts.utc(year, month, day, hours, 0)
     fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(111, projection='polar')
+    ax = fig.add_subplot(122, projection='polar')
     ax.set_theta_zero_location('N')
     ax.set_theta_direction(-1)
     ax.set_rlim(0, 90)
     ax.set_yticks(range(0, 91, 30))
     ax.set_yticklabels(['90°', '60°', '30°', '0° (Horizon)'])
+
     tab = plt.cm.tab10(np.linspace(0, 1, max(10, len(bodies))))
     dfs = []
     for idx, (planet_name, body) in enumerate(bodies.items()):
@@ -226,14 +225,12 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     ax.set_title(f'All bodies sky paths — {year}-{month:02d}-{day:02d} UTC', pad=12)
     plt.tight_layout()
     plt.show()
-    plt.savefig('Image')
     return pd.concat(dfs, ignore_index=True)
     
-# Add every UTC day you want; each gets one figure and one entry in the dict.
+    # Add every UTC day you want; each gets one figure and one entry in the dict.
 DAYS_UTC = [
     (2026, 3, 1),
 ]
-
 sky_path_df_by_day = {}
 for y, m, d in DAYS_UTC:
     day_key = f"{y}-{m:02d}-{d:02d}"
@@ -242,6 +239,64 @@ for y, m, d in DAYS_UTC:
 for day_key, df_day in sky_path_df_by_day.items():
     print(f"{day_key}: {len(df_day)} rows")
 
+N_SAMPLES_PER_DAY = 96  # samples from 0–24h UTC
+def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_DAY):
+    hours = np.linspace(0, 24, n_samples, endpoint=False)
+    # Skyfield time array for each UTC hour
+    # If this ever complains about float hours, use the t0 + seconds approach below instead.
+    t_day = ts.utc(year, month, day, hours, 0)
+    # t0 = ts.utc(year, month, day, 0, 0, 0)
+    # t_day = t0 + hours * 3600
+    fig, ax = plt.subplots()
+    tab = plt.cm.tab10(np.linspace(0, 1, max(10, len(bodies))))
+    dfs = []
+    for idx, (planet_name, body) in enumerate(bodies.items()):
+        astrometric = columbus.at(t_day).observe(body)
+        alt, az, _ = astrometric.apparent().altaz(pressure_mbar=1010)
+        altd = np.asarray(alt.degrees)
+        azdeg = np.asarray(az.degrees)
+        color = tab[idx % len(tab)]
+        # Plot the full diurnal arc (negative altitude = below the horizon).
+        ax.plot(hours, altd, color=color, linewidth=2, label=planet_name)
+        n = len(altd)
+        dfs.append(
+            pd.DataFrame(
+                {
+                    "Planet": [planet_name] * n,
+                    "UTC_hour": hours,
+                    "Altitude": altd,
+                    "Azimuth": azdeg,
+                }
+            )
+        )
+    ax.axhline(0, color="black", linewidth=0.8)
+    ax.set_xlim(0, 24)
+    ax.set_ylim(-180, 180)
+    ax.set_xlabel("UTC Hour")
+    ax.set_ylabel("Altitude (degrees)")
+    ax.set_title(f"All bodies altitude vs time — {year}-{month:02d}-{day:02d} UTC")
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="upper left", fontsize=5)
+    ax.set_xticks([0, 6, 12, 18, 24])
+    ax.set_xticklabels([0, 6, 12, 18, 24])
+    ax.set_yticks(range(-180, 181, 90))
+    ax.set_yticklabels([-180, -90, '0 (Horizon)', 90, 180])
+    
+    plt.tight_layout()
+    plt.show()
+    return pd.concat(dfs, ignore_index=True)
+DAYS_UTC = [
+    (2026, 3, 1),
+]
+sky_path_df_by_day = {}
+for y, m, d in DAYS_UTC:
+    day_key = f"{y}-{m:02d}-{d:02d}"
+    df_day = plot_all_planets_altitude_vs_time(y, m, d)
+    sky_path_df_by_day[day_key] = df_day.assign(UTC_date=day_key)
+for day_key, df_day in sky_path_df_by_day.items():
+    print(f"{day_key}: {len(df_day)} rows")
+
+
 st.title("Solar System Dashboard")
 st.write("This Solar System Dashboard will track and display the positions of the planets (and the moon) in the sky in relation to Columbus, Ohio")
 st.write("Select a date to see the positions of the planets in the sky")
@@ -249,5 +304,7 @@ DAYS_UTC = st.date_input("Select a date", )
 if st.button("Plot Planets"):
     with st.spinner("Plotting planets..."):
         plot_all_planets_sky_path(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day)
+        plot_all_planets_altitude_vs_time(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day)
         st.success("Planets plotted successfully!")
-    st.image("Image.png")
+    st.image("image.png")
+    st.image("image2.png")
