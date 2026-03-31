@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from skyfield.api import load, wgs84
 from skyfield import almanac
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import astropy
 from skyfield.framelib import ecliptic_frame
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz, get_sun, get_body
@@ -210,6 +210,8 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
 
     ax.legend(loc='upper left', bbox_to_anchor=(1.08, 1.02), fontsize=9)
     ax.set_title(f'All bodies sky paths — {year}-{month:02d}-{day:02d} UTC', pad=12)
+    ax.set_thetagrids((0, 90, 180, 270), color="white")
+    #0 is North, 180 is South
     plt.tight_layout()
     plt.show()
     plt.savefig("skypath.png") #saves the plot as a png file to later be displayed in streamlit
@@ -279,8 +281,8 @@ print(f"{day_key} (altitude vs time): {len(altitude_vs_time_df)} rows")
 close_threshold = 10.0  
 step_minutes = 10
 
-start_dt = datetime(2026, 3, 1, tzinfo=timezone.utc)
-end_dt = datetime(2026, 5, 30, tzinfo=timezone.utc) 
+start_dt = datetime.datetime(2026, 3, 1, tzinfo=timezone.utc)
+end_dt = datetime.datetime(2026, 5, 30, tzinfo=timezone.utc) 
 step = timedelta(minutes=step_minutes)
 
 n_steps = int((end_dt - start_dt) / step) + 1
@@ -342,13 +344,13 @@ for i, name_a in enumerate(names):
         )
 
 all_conjunctions = sorted(all_conjunctions, key=lambda d: (d["time"], d["pair"]))
-pd.DataFrame(all_conjunctions)
+conjunctions = pd.DataFrame(all_conjunctions)
 
 #Streamlit app setup
 st.title("Solar System Dashboard")
 st.write("This Solar System Dashboard will track and display the positions of the planets (and the moon) in the sky in relation to Columbus, Ohio")
 st.write("Select a date to see the positions of the planets in the sky")
-DAYS_UTC = st.date_input("Select a date", ) #allows you to choose the date from a calendar that will display all the calculations and plots for that day 
+DAYS_UTC = st.date_input("Select a date"). #allows you to choose the date from a calendar that will display all the calculations and plots for that day 
 if st.button("Plot Planets"):
     with st.spinner("Plotting planets..."):
         plot_all_planets_sky_path(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day)
@@ -358,3 +360,8 @@ if st.button("Plot Planets"):
     col1.image("skypath.png")
     col2.image("altvstime.png")
     #plots the two saved images from earlier into streamlit
+st.write("This prints conjunctions from March 1st 2026 to May 30th 2026")
+if st.button("Print Conjunctions"):
+    with st.spinner('Printing conjunctions...'):
+        st.dataframe(conjunctions)
+        
