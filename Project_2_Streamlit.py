@@ -137,7 +137,7 @@ single_day = Time.now()
 # Daily polar sky paths — run after the setup cell (needs `columbus`, `bodies`, `ts`).
 N_SAMPLES_PER_DAY = 96  #samples in 15 minute increments throughout the day
 def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
-    hours = np.linspace(0, 24, n_samples, endpoint=False)
+    hours = np.linspace(0, 24, n_samples, endpoint=False) #ignores the last hour to avoid duplicates/overlap
     t_day = ts.utc(year, month, day, hours, 0)
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='polar') #uses polar coordinates (degrees)
@@ -364,4 +364,4 @@ st.write("This prints conjunctions from March 1st 2026 to May 30th 2026")
 if st.button("Print Conjunctions"):
     with st.spinner('Printing conjunctions...'):
         st.dataframe(conjunctions)
-        
+    #plots all the conjugations during the given time period
