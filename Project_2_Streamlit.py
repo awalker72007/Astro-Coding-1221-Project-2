@@ -18,7 +18,10 @@ import os
 
 plt.rcParams['figure.facecolor'] = '#0e1117'
 plt.rcParams['text.color'] = 'white'
-plt.rcParams['figure.']
+plt.rcParams['figure.edgecolor'] = 'white'
+plt.rcParams['legend.facecolor'] = "#0e1117"
+
+
 
 eph = load('de440s.bsp')
 ephemeris = eph 
@@ -34,6 +37,7 @@ bodies = {
     "uranus": eph['uranus barycenter'],
     "venus": eph['venus barycenter'],
     "mercury": eph['mercury barycenter'],
+    "neptune": eph['neptune barycenter']
 }
 #Grabbing the planets from the emphemeris and naming them
 sun = eph['sun']
@@ -41,11 +45,15 @@ earth = eph['earth']
 
 ts = load.timescale()
 #Skyfield's time system
-days = np.arange(0, 90)
+hours = np.linspace(0, 24, 96)
 global t_variable
-t_variable = ts.utc(2026, 3, 1 + days)
+t_variable = ts.utc(2026, 3, 1, hours + 7, 0)
 t_start = ts.utc(2026, 3, 1)
 t_end = ts.utc(2026, 3, 1 + 90)
+
+#Singular day calculations
+
+
 
 
 now = Time.now()
@@ -75,14 +83,14 @@ def is_planet_in_sky(self, t0, t1):
 def moon_phase():
 
     
-    percent_illuminated = 100 * columbus.at(t_variable).observe(eph['moon']).fraction_illuminated(eph['sun'])
+   percent_illuminated = 100 * columbus.at(t_variable).observe(eph['moon']).fraction_illuminated(eph['sun'])
     
-    _, sunlong, _ = columbus.at(t_variable).observe(eph['sun']).apparent().frame_latlon(ecliptic_frame)
-    _, moonlong, _ = columbus.at(t_variable).observe(eph['moon']).apparent().frame_latlon(ecliptic_frame)
-    phase = (np.asarray(moonlong.degrees) - np.asarray(sunlong.degrees)) % 360
-    illumination = np.asarray(percent_illuminated)
-
-    conditions = [
+   _, sunlong, _ = columbus.at(t_variable).observe(eph['sun']).apparent().frame_latlon(ecliptic_frame)
+   _, moonlong, _ = columbus.at(t_variable).observe(eph['moon']).apparent().frame_latlon(ecliptic_frame)
+   phase = (np.asarray(moonlong.degrees) - np.asarray(sunlong.degrees)) % 360
+   illumination = np.asarray(percent_illuminated)
+    
+   conditions = [
         (phase >= 2) & (phase <= 88),
         (phase > 88) & (phase < 92),
         (phase >= 92) & (phase <= 178),
@@ -91,7 +99,7 @@ def moon_phase():
         (phase > 268) & (phase < 272),
         (phase >= 272) & (phase <= 358),
     ]
-    labels = [
+   labels = [
         'Waxing Crescent',
         'First Quarter',
         'Waxing Gibbous',
@@ -100,16 +108,16 @@ def moon_phase():
         'Last Quarter',
         'Waning Crescent',
     ]
-    phase_name = np.select(conditions, labels, default='New Moon')
+   phase_name = np.select(conditions, labels, default='New Moon')
 
-    moon_df = pd.DataFrame({
+   moon_df = pd.DataFrame({
         'percent_illuminated': illumination,
         'phase_angle_deg': phase,
         'moon_phase': phase_name,
     })
-    return moon_df
+   return moon_df
 
-moon_phases_df = moon_phase()
+#  moon_phases_df = moon_phase()
 
 
 
@@ -119,8 +127,6 @@ def observation_from_user(body, planet_name):
     astrometric = columbus.at(t_variable).observe(body)
     apparent = astrometric.apparent()
     alt, az, distance = apparent.altaz(pressure_mbar=1010)
-    t, y = almanac.find_risings(columbus, body, t_start, t_end)
-    t, y = almanac.find_settings(columbus, body, t_start, t_end)
     n = len(alt.degrees)
     df = pd.DataFrame({
         'Planet': [planet_name] * n,
@@ -134,10 +140,6 @@ for planet_name, body in bodies.items():
     df = observation_from_user(body, planet_name)
     print(planet_name)
     print(df)
-
-#Singular day calculations
-global single_day
-single_day = Time.now()
 
 
 def is_night():
@@ -159,12 +161,13 @@ planet_cmaps = {
 cmap = plt.get_cmap(planet_cmaps.get(planet_name, "viridis"))
 
 # Daily polar sky paths — run after the setup cell (needs `columbus`, `bodies`, `ts`).
-N_SAMPLES_PER_DAY = 96  # samples from 0–24h UTC
+N_SAMPLES_PER_DAY = 96  
 def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     hours = np.linspace(0, 24, n_samples, endpoint=False)
     t_day = ts.utc(year, month, day, hours + 7, 0)
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='polar')
+    ax.color = "black"
     ax.set_theta_zero_location('N')
     ax.set_theta_direction(-1)
     ax.set_rlim(0, 90)
@@ -227,7 +230,7 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
 
             
     ax.legend(loc='upper left', bbox_to_anchor=(1.08, 1.02), fontsize=9)
-    ax.set_title(f'All bodies sky paths — {year}-{month:02d}-{day:02d} UTC', pad=12)
+    ax.set_title(f'All bodies sky paths — {year}-{month:02d}-{day:02d} UTC', pad=12, color = "white")
     plt.tight_layout()
     plt.show()
     plt.savefig("skypath.png")
@@ -277,7 +280,7 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
                 }
             )
         )
-    ax.axhline(0, color="black", linewidth=0.8)
+    ax.axhline(0, color="white", linewidth=0.8)
     ax.set_xlim(0, 24)
     ax.set_ylim(-180, 180)
     ax.set_xlabel("UTC Hour")
@@ -288,7 +291,7 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
     ax.set_xticks([0, 6, 12, 18, 24])
     ax.set_xticklabels([0, 6, 12, 18, 24])
     ax.set_yticks(range(-180, 181, 90))
-    ax.set_yticklabels([-180, -90, '0 (Horizon)', 90, 180])
+    ax.set_yticklabels([-180, -90, '0 (Horizon)', 90, 180], color = 'white')
    
 
     plt.tight_layout()
