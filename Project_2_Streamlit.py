@@ -276,7 +276,7 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
     return pd.concat(dfs, ignore_index=True)
 
 altitude_vs_time_df = plot_all_planets_altitude_vs_time(Y, M, D).assign(UTC_date=day_key)
-print(f"{day_key} (altitude vs time): {len(altitude_vs_time_df)} rows")
+
 
 close_threshold = 10.0  
 step_minutes = 10
@@ -350,7 +350,7 @@ conjunctions = pd.DataFrame(all_conjunctions)
 st.title("Solar System Dashboard")
 st.write("This Solar System Dashboard will track and display the positions of the planets (and the moon) in the sky in relation to Columbus, Ohio")
 st.write("Select a date to see the positions of the planets in the sky")
-DAYS_UTC = st.date_input("Select a date"). #allows you to choose the date from a calendar that will display all the calculations and plots for that day 
+DAYS_UTC = st.date_input("Select a date") #allows you to choose the date from a calendar that will display all the calculations and plots for that day 
 if st.button("Plot Planets"):
     with st.spinner("Plotting planets..."):
         plot_all_planets_sky_path(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day)
