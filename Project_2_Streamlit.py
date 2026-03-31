@@ -131,14 +131,8 @@ def is_night(columbus_topos, single_day):
 #checks if it is night or not by checking if it is astronomical twilight. if it is less than 1, it is astronomical twilight
 
 #Singular day calculations
-single_day = Time.now()
 global single_day
-
-def is_night(columbus_topos, single_day):
-    night_check = almanac.dark_twilight_day(eph, columbus_topos)
-    night_state = night_check(single_day)
-    return night_state <= 1
-#checks if it is night or not by checking if it is astronomical twilight. if it is less than 1, it is astronomical twilight
+single_day = Time.now()
 
 # Daily polar sky paths — run after the setup cell (needs `columbus`, `bodies`, `ts`).
 N_SAMPLES_PER_DAY = 96  #samples in 15 minute increments throughout the day
@@ -282,6 +276,73 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
 altitude_vs_time_df = plot_all_planets_altitude_vs_time(Y, M, D).assign(UTC_date=day_key)
 print(f"{day_key} (altitude vs time): {len(altitude_vs_time_df)} rows")
 
+close_threshold = 10.0  
+step_minutes = 10
+
+start_dt = datetime(2026, 3, 1, tzinfo=timezone.utc)
+end_dt = datetime(2026, 5, 30, tzinfo=timezone.utc) 
+step = timedelta(minutes=step_minutes)
+
+n_steps = int((end_dt - start_dt) / step) + 1
+_datetimes = [start_dt + i * step for i in range(n_steps)]
+times_search = ts.from_datetimes(_datetimes)
+
+
+def _refine_minimum_time(body_a, body_b, idx, samples=121):
+    """Refine the minimum near times_search[idx] using a dense TT grid."""
+    i0 = max(0, idx - 1)
+    i1 = min(len(times_search) - 1, idx + 1)
+
+    if i0 == i1:
+        t_best = times_search[idx]
+        sep_best = columbus.at(t_best).observe(body_a).apparent().separation_from(
+            columbus.at(t_best).observe(body_b).apparent()
+        ).degrees
+        return t_best, float(sep_best)
+
+    tt0 = times_search[i0].tt
+    tt1 = times_search[i1].tt
+    t_detail = ts.tt_jd(np.linspace(tt0, tt1, samples))
+
+    a_pos = columbus.at(t_detail).observe(body_a).apparent()
+    b_pos = columbus.at(t_detail).observe(body_b).apparent()
+    seps = a_pos.separation_from(b_pos).degrees
+
+    j = int(np.argmin(seps))
+    return t_detail[j], float(seps[j])
+
+
+def find_conjunctions_for_pair(name_a, body_a, name_b, body_b, close_threshold=close_threshold):
+    a_pos = columbus.at(times_search).observe(body_a).apparent()
+    b_pos = columbus.at(times_search).observe(body_b).apparent()
+    seps = a_pos.separation_from(b_pos).degrees
+
+    mins = np.where((seps[1:-1] < seps[:-2]) & (seps[1:-1] <= seps[2:]))[0] + 1
+    mins = mins[seps[mins] < close_threshold]
+
+    out = []
+    for idx in mins:
+        t_best, sep_best = _refine_minimum_time(body_a, body_b, idx)
+        out.append(
+            {
+                "pair": (name_a, name_b),
+                "time": t_best.utc_strftime("%Y-%m-%d %H:%M"),
+                "separation_deg": float(sep_best),
+            }
+        )
+    return out
+
+
+names = list(bodies.keys())
+all_conjunctions = []
+for i, name_a in enumerate(names):
+    for name_b in names[i + 1 :]:
+        all_conjunctions.extend(
+            find_conjunctions_for_pair(name_a, bodies[name_a], name_b, bodies[name_b])
+        )
+
+all_conjunctions = sorted(all_conjunctions, key=lambda d: (d["time"], d["pair"]))
+pd.DataFrame(all_conjunctions)
 
 #Streamlit app setup
 st.title("Solar System Dashboard")
