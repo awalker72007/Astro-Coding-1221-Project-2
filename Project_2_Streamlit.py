@@ -147,27 +147,22 @@ def is_night():
     night_state = night_check(single_day)
     return night_state <= 1
 
-planet_cmaps = {
-    "sun": "Accent",
-    "moon": "Purples",
-    "mercury": "Reds",
-    "venus": "Oranges",
-    "mars": "Greens",
-    "jupiter": "Blues",
-    "saturn": "Wistia",
-    "uranus": "winter",
-    "pluto": "spring",
-}
-cmap = plt.get_cmap(planet_cmaps.get(planet_name, "viridis"))
+#Singular day calculations
+single_day = Time.now()
+global single_day
+
+def is_night():
+    night_check = almanac.dark_twilight_day(eph, columbus_topos)
+    night_state = night_check(single_day)
+    return night_state <= 1
 
 # Daily polar sky paths — run after the setup cell (needs `columbus`, `bodies`, `ts`).
-N_SAMPLES_PER_DAY = 96  
+N_SAMPLES_PER_DAY = 96  # samples from 0–24h UTC
 def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     hours = np.linspace(0, 24, n_samples, endpoint=False)
-    t_day = ts.utc(year, month, day, hours + 7, 0)
+    t_day = ts.utc(year, month, day, hours, 0)
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='polar')
-    ax.color = "black"
     ax.set_theta_zero_location('N')
     ax.set_theta_direction(-1)
     ax.set_rlim(0, 90)
@@ -193,72 +188,66 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
         )
         mask = altd > 0
         if np.any(mask):
-            c = tab[idx % len(tab)]
+            # Same tab10 color as plot_all_planets_altitude_vs_time for this planet
+            color = tab[idx % len(tab)]
             mask_idx = np.where(mask)[0]
             # Split where visibility is not contiguous, so we do not draw
             # straight jump lines across below-horizon gaps.
             breaks = np.where(np.diff(mask_idx) > 1)[0] + 1
             chunks = np.split(mask_idx, breaks)
 
-            first_chunk = True
+            legend_done = False
+            az_rad = np.asarray(az.radians)
             for chunk in chunks:
-            # Define coordinates for this contiguous visible "chunk"
-                theta_chunk = az.radians[chunk]
+                theta_chunk = az_rad[chunk]
                 r_chunk = 90 - altd[chunk]
-            
-            # Get the specific cmap for this planet inside the loop
-                current_cmap = plt.get_cmap(planet_cmaps.get(planet_name, "viridis"))
 
-            # Handle Azimuth wrapping (0 <-> 360) to prevent cross-chart streaks
+                # Handle Azimuth wrapping (0 <-> 360) to prevent cross-chart streaks
                 wrap_breaks = np.where(np.abs(np.diff(theta_chunk)) > np.pi)[0] + 1
                 theta_sub_chunks = np.split(theta_chunk, wrap_breaks)
                 r_sub_chunks = np.split(r_chunk, wrap_breaks)
 
-            for th, rr in zip(theta_sub_chunks, r_sub_chunks):
-                if len(th) < 2: 
-                    # Plot a single point if it's too short for a line
-                    ax.plot(th, rr, color=current_cmap(0.5), marker='o', markersize=3)
-                    continue
-                
-                # Draw segments with gradient colors
-                nseg = len(th) - 1
-                for i in range(nseg):
-                    seg_color = current_cmap(i / max(nseg, 1))
-                    ax.plot(th[i:i+2], rr[i:i+2], color=seg_color, linewidth=2,
-                            label=planet_name if (first_chunk and i == 0) else None)
-            first_chunk = False
+                for th, rr in zip(theta_sub_chunks, r_sub_chunks):
+                    if len(th) < 2:
+                        ax.plot(
+                            th,
+                            rr,
+                            color=color,
+                            marker='o',
+                            markersize=3,
+                            label=planet_name if not legend_done else None,
+                        )
+                    else:
+                        ax.plot(
+                            th,
+                            rr,
+                            color=color,
+                            linewidth=2,
+                            label=planet_name if not legend_done else None,
+                        )
+                    legend_done = True
 
-            
     ax.legend(loc='upper left', bbox_to_anchor=(1.08, 1.02), fontsize=9)
-    ax.set_title(f'All bodies sky paths — {year}-{month:02d}-{day:02d} UTC', pad=12, color = "white")
+    ax.set_title(f'All bodies sky paths — {year}-{month:02d}-{day:02d} UTC', pad=12)
     plt.tight_layout()
     plt.show()
-    plt.savefig("skypath.png")
     return pd.concat(dfs, ignore_index=True)
-    
-    # Add every UTC day you want; each gets one figure and one entry in the dict.
-DAYS_UTC = [
-    (2026, 3, 1),
-]
-sky_path_df_by_day = {}
-for y, m, d in DAYS_UTC:
-    day_key = f"{y}-{m:02d}-{d:02d}"
-    df_day = plot_all_planets_sky_path(y, m, d)
-    sky_path_df_by_day[day_key] = df_day.assign(UTC_date=day_key)
-for day_key, df_day in sky_path_df_by_day.items():
-    print(f"{day_key}: {len(df_day)} rows")
 
-N_SAMPLES_PER_DAY = 96  # samples from 0–24h UTC
+# Single UTC day for sky paths
+Y, M, D = 2026, 3, 1
+day_key = f"{Y}-{M:02d}-{D:02d}"
+sky_path_df = plot_all_planets_sky_path(Y, M, D).assign(UTC_date=day_key)
+print(f"{day_key}: {len(sky_path_df)} rows")
+
 def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     hours = np.linspace(0, 24, n_samples, endpoint=False)
     # Skyfield time array for each UTC hour
     # If this ever complains about float hours, use the t0 + seconds approach below instead.
-    t_day = ts.utc(year, month, day, hours + 12, 0)
+    t_day = ts.utc(year, month, day, hours, 0)
     # t0 = ts.utc(year, month, day, 0, 0, 0)
     # t_day = t0 + hours * 3600
-    
-    fig = plt.figure(figsize=(10,10))
-    ax = fig.add_subplot()
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111)
     tab = plt.cm.tab10(np.linspace(0, 1, max(10, len(bodies))))
     dfs = []
     for idx, (planet_name, body) in enumerate(bodies.items()):
@@ -280,9 +269,9 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
                 }
             )
         )
-    ax.axhline(0, color="white", linewidth=0.8)
+    ax.axhline(0, color="black", linewidth=0.8)
     ax.set_xlim(0, 24)
-    ax.set_ylim(-180, 180)
+    ax.set_ylim(-90, 90)
     ax.set_xlabel("UTC Hour")
     ax.set_ylabel("Altitude (degrees)")
     ax.set_title(f"All bodies altitude vs time — {year}-{month:02d}-{day:02d} UTC")
@@ -290,24 +279,16 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
     ax.legend(loc="upper left", fontsize=5)
     ax.set_xticks([0, 6, 12, 18, 24])
     ax.set_xticklabels([0, 6, 12, 18, 24])
-    ax.set_yticks(range(-180, 181, 90))
-    ax.set_yticklabels([-180, -90, '0 (Horizon)', 90, 180], color = 'white')
-   
-
+    ax.set_yticks((-90, 0, 90))
+    ax.set_yticklabels([-90, '0 (Horizon)', 90])
+    
     plt.tight_layout()
     plt.show()
-    plt.savefig("altvstime.png")
     return pd.concat(dfs, ignore_index=True)
-DAYS_UTC = [
-    (2026, 3, 1),
-]
-sky_path_df_by_day = {}
-for y, m, d in DAYS_UTC:
-    day_key = f"{y}-{m:02d}-{d:02d}"
-    df_day = plot_all_planets_altitude_vs_time(y, m, d)
-    sky_path_df_by_day[day_key] = df_day.assign(UTC_date=day_key)
-for day_key, df_day in sky_path_df_by_day.items():
-    print(f"{day_key}: {len(df_day)} rows")
+
+altitude_vs_time_df = plot_all_planets_altitude_vs_time(Y, M, D).assign(UTC_date=day_key)
+print(f"{day_key} (altitude vs time): {len(altitude_vs_time_df)} rows")
+
 
 
 st.title("Solar System Dashboard")
