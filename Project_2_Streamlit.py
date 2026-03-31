@@ -15,17 +15,18 @@ from astroplan import Observer, FixedTarget
 from astropy.visualization import astropy_mpl_style, quantity_support
 import streamlit as st
 import os
+##All necessary imports for the project
 
 plt.rcParams['figure.facecolor'] = '#0e1117'
 plt.rcParams['text.color'] = 'white'
 plt.rcParams['figure.edgecolor'] = 'white'
 plt.rcParams['legend.facecolor'] = "#0e1117"
-
+#Setting default values for the plots to make them look nicer
 
 
 eph = load('de440s.bsp')
 ephemeris = eph 
-#Using the de440s emphemeris file for the locations
+#Using the de440s emphemeris file for the locations and later plotting
 
 bodies = {
     "sun": eph['sun'],
@@ -39,9 +40,10 @@ bodies = {
     "mercury": eph['mercury barycenter'],
     "neptune": eph['neptune barycenter']
 }
-#Grabbing the planets from the emphemeris and naming them
+#Grabbing the planets from the emphemeris, putting them in a dictionary, and naming them
 sun = eph['sun']
 earth = eph['earth']
+#for the moon phase calculations
 
 ts = load.timescale()
 #Skyfield's time system
@@ -50,20 +52,7 @@ global t_variable
 t_variable = ts.utc(2026, 3, 1, hours + 7, 0)
 t_start = ts.utc(2026, 3, 1)
 t_end = ts.utc(2026, 3, 1 + 90)
-
-#Singular day calculations
-
-
-
-
-now = Time.now()
-days =np.linspace(0, 90, 24*91)
-times = now + days * u.day
-#making time array thing
-
-#altaz_frames = AltAz(obstime=times, location=columbus)
-#getting altaz from times
-
+#Singular day calculations and time variable for later use
 
 columbus_lat = 39.9612
 columbus_lon = -83.0003
@@ -74,12 +63,6 @@ columbus = earth + wgs84.latlon(columbus_lat, columbus_lon, elevation_m = columb
 #Creating the observer to call from
 
 
-def is_planet_in_sky(self, t0, t1):
-    #t0 is the start time, t1 is the end time of observation
-    t, y = almanac.find_risings(columbus, self, t0, t1)
-
-
-
 def moon_phase():
 
     
@@ -88,6 +71,7 @@ def moon_phase():
    _, sunlong, _ = columbus.at(t_variable).observe(eph['sun']).apparent().frame_latlon(ecliptic_frame)
    _, moonlong, _ = columbus.at(t_variable).observe(eph['moon']).apparent().frame_latlon(ecliptic_frame)
    phase = (np.asarray(moonlong.degrees) - np.asarray(sunlong.degrees)) % 360
+   #0 degrees is new moon, 90 degrees is first quarter, 180 degrees is full moon, 270 degrees is last quarter, and 360 degrees is new moon again
    illumination = np.asarray(percent_illuminated)
     
    conditions = [
@@ -117,8 +101,6 @@ def moon_phase():
     })
    return moon_df
 
-#  moon_phases_df = moon_phase()
-
 
 
 
@@ -134,7 +116,7 @@ def observation_from_user(body, planet_name):
         'Azimuth': az.degrees,
     })
     return(df)
-
+#gets the altitude and azimuth of the planets from the dictionary at the chosen time
 
 for planet_name, body in bodies.items():
     df = observation_from_user(body, planet_name)
@@ -142,10 +124,11 @@ for planet_name, body in bodies.items():
     print(df)
 
 
-def is_night():
+def is_night(columbus_topos, single_day):
     night_check = almanac.dark_twilight_day(eph, columbus_topos)
     night_state = night_check(single_day)
     return night_state <= 1
+#checks if it is night or not by checking if it is astronomical twilight. if it is less than 1, it is astronomical twilight
 
 planet_cmaps = {
     "sun": "Accent",
@@ -161,18 +144,20 @@ planet_cmaps = {
 cmap = plt.get_cmap(planet_cmaps.get(planet_name, "viridis"))
 
 # Daily polar sky paths — run after the setup cell (needs `columbus`, `bodies`, `ts`).
-N_SAMPLES_PER_DAY = 96  
+N_SAMPLES_PER_DAY = 96  #samples in 15 minute increments throughout the day
 def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     hours = np.linspace(0, 24, n_samples, endpoint=False)
     t_day = ts.utc(year, month, day, hours + 7, 0)
     fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(111, projection='polar')
+    ax = fig.add_subplot(111, projection='polar') #uses polar coordinates (degrees)
     ax.color = "black"
     ax.set_theta_zero_location('N')
     ax.set_theta_direction(-1)
     ax.set_rlim(0, 90)
     ax.set_yticks(range(0, 91, 30))
-    ax.set_yticklabels(['90°', '60°', '30°', '0° (Horizon)'])
+    ax.set_yticklabels(['90° Zenith', '60°', '30°', '0° (Horizon)'])
+#setup for the polar plot that will show the daily sky paths of the planets
+#90° Zenith is the top of the sky, 60° is 60 degrees above the horizon, 30° is 30 degrees above the horizon, and 0° (Horizon) is the horizon
 
     tab = plt.cm.tab10(np.linspace(0, 1, max(10, len(bodies))))
     dfs = []
@@ -233,9 +218,9 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     ax.set_title(f'All bodies sky paths — {year}-{month:02d}-{day:02d} UTC', pad=12, color = "white")
     plt.tight_layout()
     plt.show()
-    plt.savefig("skypath.png")
+    plt.savefig("skypath.png") #saves the plot as a png file to later be displayed in streamlit
     return pd.concat(dfs, ignore_index=True)
-    
+
     # Add every UTC day you want; each gets one figure and one entry in the dict.
 DAYS_UTC = [
     (2026, 3, 1),
@@ -292,11 +277,11 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
     ax.set_xticklabels([0, 6, 12, 18, 24])
     ax.set_yticks(range(-180, 181, 90))
     ax.set_yticklabels([-180, -90, '0 (Horizon)', 90, 180], color = 'white')
-   
+   #altitude vs time graph that shows the path of the planets throughout the entire day starting at noon EST
 
     plt.tight_layout()
     plt.show()
-    plt.savefig("altvstime.png")
+    plt.savefig("altvstime.png") #saves the plot as a png file to later be displayed in streamlit
     return pd.concat(dfs, ignore_index=True)
 DAYS_UTC = [
     (2026, 3, 1),
@@ -309,11 +294,11 @@ for y, m, d in DAYS_UTC:
 for day_key, df_day in sky_path_df_by_day.items():
     print(f"{day_key}: {len(df_day)} rows")
 
-
+#Streamlit app setup
 st.title("Solar System Dashboard")
 st.write("This Solar System Dashboard will track and display the positions of the planets (and the moon) in the sky in relation to Columbus, Ohio")
 st.write("Select a date to see the positions of the planets in the sky")
-DAYS_UTC = st.date_input("Select a date", )
+DAYS_UTC = st.date_input("Select a date", ) #allows you to choose the date from a calendar that will display all the calculations and plots for that day 
 if st.button("Plot Planets"):
     with st.spinner("Plotting planets..."):
         plot_all_planets_sky_path(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day)
@@ -322,3 +307,4 @@ if st.button("Plot Planets"):
     col1, col2 = st.columns(2)
     col1.image("skypath.png")
     col2.image("altvstime.png")
+    #plots the two saved images from earlier into streamlit
