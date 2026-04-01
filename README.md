@@ -38,4 +38,4 @@ Once the code for the first plot was finished, we started on making another grap
 5. Test out streamlit functions
 
 ### Disclaimer on AI Usage in Our Project: 
-Though not used much at all throughout our project, AI was used in some minor areas where we were too confused to know what to do ourselves or needed help fixing the code when nothing else was working.
+AI was used in areas where we were too confused to know what to do ourselves or needed help fixing the code when nothing else was working; however, the AI did a lot of changes to our original code.
