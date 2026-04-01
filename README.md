@@ -11,9 +11,9 @@ This is the 2nd project for Astro 1221, where we go over topics we have learned 
 ### Plotting the Sky Paths: 
     Lines 137-281
 ### Conjunctions: 
-    Lines 282-349
+    Lines 282-350
 ### Streamlit: 
-    Lines 350-368
+    Lines 351-369
 
 
 ### Goal:
@@ -28,7 +28,9 @@ With the necessary information stored, we started on our plots. We made it so th
 
 Once the code for the first plot was finished, we started on making another graph to more clearly show how the altitude of the bodies in our dictionary changed throughout a 24 hour period. The process for making this graph was similar in many ways to the other, though we had to change multiple things to fit the different type of graph that we were plotting this time. We colored the bodies in the same way as the last graph, with the matplotlib "tableau 10" color map, and created another t_day time variable to use for pulling the information we need on the chosen day. The plot then differs from the first in that it is not a polar graph but a line graph showing the change in altitude for each of the bodies versus time in hours per day. We calculated the altitude through taking the bodies' apparent altitude from Columbus at t_day, making sure to account for atmospheric refraction, and turning that altitude into an array that can be plotted onto our graph. This data, along with the time and azimuth, are then put into our pandas dataframe. The graph then shows each of the bodies in different colors and their path above and below the horizon throughout the chosen 24 hour time period, and the gaps between all of the lines ending and the actual end of the graph are the gaps in observation data that was mentioned in the previous graph. I believe the issue was that the data at this time was not collected for whatever reason, and thus was not able to be graphed. The graph produced by the code on the chosen day is then again saved as a png to be displayed on streamlit.
 
+The last thing we looked for with our code were the bodies' conjunctions. We made it so that we look for any conjunctions over a 90 day period, starting from March 1st to May 30th. The code would then check each of the bodies in the dictionary's angular separation every ten minutes, and search for local minima which would be where there are conjunctions. We then refined what the conjunctions were by having the code look closer at these minima within the 10 minute periods and find exactly where and when the lowest possible separation for each of the pairs of bodies was. This data is then stored in a pandas dataframe.
 
+Lastly, we created a streamlit page that allows the user to choose a date from a calendar and plots the solar system bodies' sky paths and altitude vs time for this day. These are from the two graphs created earlier. It also shows the user each of the conjunctions during the March 1st through May 30th time period.
 
 ### How to Run: 
 1. Clone the repo: [git clone ...]

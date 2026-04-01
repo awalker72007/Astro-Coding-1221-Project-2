@@ -15,7 +15,7 @@ from astroplan import Observer, FixedTarget
 from astropy.visualization import astropy_mpl_style, quantity_support
 import streamlit as st
 import os
-##All necessary imports for the project
+#All necessary imports for the project
 
 plt.rcParams['figure.facecolor'] = '#0e1117'
 plt.rcParams['text.color'] = 'white'
@@ -68,9 +68,9 @@ def moon_phase():
     
    percent_illuminated = 100 * columbus.at(t_variable).observe(eph['moon']).fraction_illuminated(eph['sun'])
     
-   _, sunlong, _ = columbus.at(t_variable).observe(eph['sun']).apparent().frame_latlon(ecliptic_frame)
-   _, moonlong, _ = columbus.at(t_variable).observe(eph['moon']).apparent().frame_latlon(ecliptic_frame)
-   phase = (np.asarray(moonlong.degrees) - np.asarray(sunlong.degrees)) % 360
+   _, sunlong, _ = columbus.at(t_variable).observe(eph['sun']).apparent().frame_latlon(ecliptic_frame) #gets the longitude of the sun in the ecliptic frame
+   _, moonlong, _ = columbus.at(t_variable).observe(eph['moon']).apparent().frame_latlon(ecliptic_frame) #gets the longitude of the moon in the ecliptic frame
+   phase = (np.asarray(moonlong.degrees) - np.asarray(sunlong.degrees)) % 360 
    #0 degrees is new moon, 90 degrees is first quarter, 180 degrees is full moon, 270 degrees is last quarter, and 360 degrees is new moon again
    illumination = np.asarray(percent_illuminated)
     
@@ -100,7 +100,7 @@ def moon_phase():
         'moon_phase': phase_name,
     })
    return moon_df
-
+#creates a pandas dataframe with the percentage of the moon illuminated, the phase angle in degrees, and the phase name
 
 
 
@@ -122,7 +122,7 @@ for planet_name, body in bodies.items():
     df = observation_from_user(body, planet_name)
     print(planet_name)
     print(df)
-
+#prints the retrieved altitudes and azimuths 
 
 def is_night(columbus_topos, single_day):
     night_check = almanac.dark_twilight_day(eph, columbus_topos)
@@ -135,27 +135,27 @@ global single_day
 single_day = Time.now()
 
 # Daily polar sky paths — run after the setup cell (needs `columbus`, `bodies`, `ts`).
-N_SAMPLES_PER_DAY = 96  #samples in 15 minute increments throughout the day
-def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
-    hours = np.linspace(0, 24, n_samples, endpoint=False) #ignores the last hour to avoid duplicates/overlap
-    t_day = ts.utc(year, month, day, hours, 0)
+N_SAMPLES_PER_DAY = 96  #samples in 15 minute increments throughout the day for better accuracy
+def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY): 
+    hours = np.linspace(0, 24, n_samples, endpoint=False) #creates an array, ignores the last hour to avoid duplicates and overlaps
+    t_day = ts.utc(year, month, day, hours, 0) #converts time from above into actual skyfield objects in UTC
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='polar') #uses polar coordinates (degrees)
-    ax.color = "black"
+    ax.color = "black" #adds a clear contrast against the white background and colorful planet paths
     ax.set_theta_zero_location('N')
-    ax.set_theta_direction(-1)
+    ax.set_theta_direction(-1) #sets the direction of the theta axis to go counterclockwise
     ax.set_rlim(0, 90)
     ax.set_yticks(range(0, 91, 30))
     ax.set_yticklabels(['90° Zenith', '60°', '30°', '0° (Horizon)'])
 #setup for the polar plot that will show the daily sky paths of the planets
 #90° Zenith is the top of the sky, 60° is 60 degrees above the horizon, 30° is 30 degrees above the horizon, and 0° (Horizon) is the horizon
 
-    tab = plt.cm.tab10(np.linspace(0, 1, max(10, len(bodies))))
+    tab = plt.cm.tab10(np.linspace(0, 1, max(10, len(bodies)))) #creates a color map for the graph so that each planet has a different, distinguishable color
     dfs = []
-    for idx, (planet_name, body) in enumerate(bodies.items()):
+    for idx, (planet_name, body) in enumerate(bodies.items()): 
         astrometric = columbus.at(t_day).observe(body)
-        alt, az, _ = astrometric.apparent().altaz(pressure_mbar=1010)
-        altd = np.asarray(alt.degrees)
+        alt, az, _ = astrometric.apparent().altaz(pressure_mbar=1010) 
+        altd = np.asarray(alt.degrees) 
         azdeg = np.asarray(az.degrees)
         n = len(altd)
         dfs.append(
@@ -166,27 +166,28 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
                     'Azimuth': azdeg,
                 }
             )
-        )
-        mask = altd > 0
+        ) #creates a pandas dataframe with the planet name, altitude, and azimuth
+        mask = altd > 0 #checks if the planet is above the horizon (when the altitude is greater than 0)
         if np.any(mask):
             # Same tab10 color as plot_all_planets_altitude_vs_time for this planet
-            color = tab[idx % len(tab)]
+            color = tab[idx % len(tab)] 
             mask_idx = np.where(mask)[0]
             # Split where visibility is not contiguous, so we do not draw
             # straight jump lines across below-horizon gaps.
             breaks = np.where(np.diff(mask_idx) > 1)[0] + 1
-            chunks = np.split(mask_idx, breaks)
+            chunks = np.split(mask_idx, breaks) #chunks the split arrays after they were broken
+            #splits the array into chunks where the planet is visible
 
-            legend_done = False
-            az_rad = np.asarray(az.radians)
-            for chunk in chunks:
-                theta_chunk = az_rad[chunk]
-                r_chunk = 90 - altd[chunk]
+            legend_done = False 
+            az_rad = np.asarray(az.radians) #converts the azimuth to radians
+            for chunk in chunks: 
+                theta_chunk = az_rad[chunk] 
+                r_chunk = 90 - altd[chunk] 
 
                 # Handle Azimuth wrapping (0 <-> 360) to prevent cross-chart streaks
-                wrap_breaks = np.where(np.abs(np.diff(theta_chunk)) > np.pi)[0] + 1
-                theta_sub_chunks = np.split(theta_chunk, wrap_breaks)
-                r_sub_chunks = np.split(r_chunk, wrap_breaks)
+                wrap_breaks = np.where(np.abs(np.diff(theta_chunk)) > np.pi)[0] + 1  
+                theta_sub_chunks = np.split(theta_chunk, wrap_breaks) 
+                r_sub_chunks = np.split(r_chunk, wrap_breaks) 
 
                 for th, rr in zip(theta_sub_chunks, r_sub_chunks):
                     if len(th) < 2:
@@ -197,7 +198,7 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
                             marker='o',
                             markersize=3,
                             label=planet_name if not legend_done else None,
-                        )
+                        ) 
                     else:
                         ax.plot(
                             th,
@@ -211,32 +212,32 @@ def plot_all_planets_sky_path(year, month, day, n_samples=N_SAMPLES_PER_DAY):
     ax.legend(loc='upper left', bbox_to_anchor=(1.08, 1.02), fontsize=9)
     ax.set_title(f'All bodies sky paths — {year}-{month:02d}-{day:02d} UTC', pad=12)
     ax.set_thetagrids((0, 90, 180, 270), color="white")
-    #0 is North, 180 is South
-    plt.tight_layout()
+    #0 is North, 90 is East, 180 is South, 270 is West
+    plt.tight_layout() #ensures that nothing in the plot is cut off or overlapping and that everything will be seen clearly and neatly
     plt.show()
     plt.savefig("skypath.png") #saves the plot as a png file to later be displayed in streamlit
     return pd.concat(dfs, ignore_index=True)
 
 # Single UTC day for sky paths
 Y, M, D = 2026, 3, 1
-day_key = f"{Y}-{M:02d}-{D:02d}"
-sky_path_df = plot_all_planets_sky_path(Y, M, D).assign(UTC_date=day_key)
+day_key = f"{Y}-{M:02d}-{D:02d}" 
+sky_path_df = plot_all_planets_sky_path(Y, M, D).assign(UTC_date=day_key) #creates a pandas dataframe with the sky path of the planets for the chosen day
 print(f"{day_key}: {len(sky_path_df)} rows")
 
-def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_DAY):
-    hours = np.linspace(0, 24, n_samples, endpoint=False)
+def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_DAY): 
+    hours = np.linspace(0, 24, n_samples, endpoint=False) #ignores the last hour to avoid duplicates/overlap
     # Skyfield time array for each UTC hour
     # If this ever complains about float hours, use the t0 + seconds approach below instead.
     t_day = ts.utc(year, month, day, hours, 0)
     # t0 = ts.utc(year, month, day, 0, 0, 0)
     # t_day = t0 + hours * 3600
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(111)
-    tab = plt.cm.tab10(np.linspace(0, 1, max(10, len(bodies))))
+    fig = plt.figure(figsize=(10, 10)) 
+    ax = fig.add_subplot(111) 
+    tab = plt.cm.tab10(np.linspace(0, 1, max(10, len(bodies)))) #creates a color map for the graph so that each planet has a different, distinguishable color
     dfs = []
     for idx, (planet_name, body) in enumerate(bodies.items()):
         astrometric = columbus.at(t_day).observe(body)
-        alt, az, _ = astrometric.apparent().altaz(pressure_mbar=1010)
+        alt, az, _ = astrometric.apparent().altaz(pressure_mbar=1010) #gets apparent position in altitude and azimuth and uses the pressure_mbar=1010 to correct for atmospheric refraction
         altd = np.asarray(alt.degrees)
         azdeg = np.asarray(az.degrees)
         color = tab[idx % len(tab)]
@@ -273,19 +274,20 @@ def plot_all_planets_altitude_vs_time(year, month, day, n_samples=N_SAMPLES_PER_
     plt.tight_layout()
     plt.show()
     plt.savefig("altvstime.png") #saves the plot as a png file to later be displayed in streamlit
-    return pd.concat(dfs, ignore_index=True)
+    return pd.concat(dfs, ignore_index=True) 
 
 altitude_vs_time_df = plot_all_planets_altitude_vs_time(Y, M, D).assign(UTC_date=day_key)
-
+#plots the altitude vs time graph for the chosen day
 
 close_threshold = 10.0  
 step_minutes = 10
 
-start_dt = datetime.datetime(2026, 3, 1, tzinfo=timezone.utc)
-end_dt = datetime.datetime(2026, 5, 30, tzinfo=timezone.utc) 
-step = timedelta(minutes=step_minutes)
+start_dt = datetime.datetime(2026, 3, 1, tzinfo=timezone.utc) #start date for the conjunctions
+end_dt = datetime.datetime(2026, 5, 30, tzinfo=timezone.utc) #end date for the conjunctions
+step = timedelta(minutes=step_minutes) 
+#about a 90 day window for when the conjunctions will be calculated
 
-n_steps = int((end_dt - start_dt) / step) + 1
+n_steps = int((end_dt - start_dt) / step) + 1 
 _datetimes = [start_dt + i * step for i in range(n_steps)]
 times_search = ts.from_datetimes(_datetimes)
 
@@ -302,7 +304,7 @@ def _refine_minimum_time(body_a, body_b, idx, samples=121):
         ).degrees
         return t_best, float(sep_best)
 
-    tt0 = times_search[i0].tt
+    tt0 = times_search[i0].tt 
     tt1 = times_search[i1].tt
     t_detail = ts.tt_jd(np.linspace(tt0, tt1, samples))
 
@@ -353,7 +355,7 @@ st.write("Select a date to see the positions of the planets in the sky")
 DAYS_UTC = st.date_input("Select a date") #allows you to choose the date from a calendar that will display all the calculations and plots for that day 
 if st.button("Plot Planets"):
     with st.spinner("Plotting planets..."):
-        plot_all_planets_sky_path(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day)
+        plot_all_planets_sky_path(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day) 
         plot_all_planets_altitude_vs_time(DAYS_UTC.year, DAYS_UTC.month, DAYS_UTC.day)
         st.success("Planets plotted successfully!")
     col1, col2 = st.columns(2)
